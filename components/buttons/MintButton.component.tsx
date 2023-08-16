@@ -8,6 +8,7 @@ import { PublicKey, TransactionWithMeta, Umi, createBigInt, generateSigner, none
 import { Dispatch, SetStateAction } from "react";
 import { PrimaryButton } from "./PrimaryButton.component";
 import { mintText } from "@/settings";
+import { fetchNft } from "@/utils/utils";
 
 interface MintButtonProps extends ButtonProps {
   umi: Umi;
@@ -40,25 +41,7 @@ const detectBotTax = (logs: string[]) => {
     return false;
 }
 
-const fetchNft = async (umi: Umi, nftAdress: PublicKey, toast: (options: Omit<UseToastOptions, "id">) => void) => {
-    let digitalAsset: DigitalAsset | undefined;
-    let jsonMetadata: JsonMetadata | undefined;
-    try {
-        digitalAsset = await fetchDigitalAsset(umi, nftAdress);
-        jsonMetadata = await fetchJsonMetadata(umi, digitalAsset.metadata.uri)
-    } catch (e) {
-        console.error(e);
-        toast({
-            title: 'Nft could not be fetched!',
-            description: "Please check your Wallet instead.",
-            status: 'error',
-            duration: 9000,
-            isClosable: true,
-        });
-    }
 
-    return { digitalAsset, jsonMetadata }
-}
 
 const updateLoadingText = (
   loadingText: string | undefined,

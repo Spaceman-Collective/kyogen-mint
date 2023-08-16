@@ -43,11 +43,11 @@ const StyledButton = styled(Button)`
 export const PrimaryButton = ({ children, className, disabled, loading, ...props }: PrimaryButtonProps) => {
   return (
     <StyledButton
-      disabled={disabled || loading}
+      isLoading={disabled || loading}
+      isDisabled={disabled || loading}
       className={className}
       {...props}
     >
-      {/* {loading && <LoadingSpinner />} */}
       {children}
     </StyledButton>
   );

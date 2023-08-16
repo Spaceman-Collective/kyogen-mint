@@ -83,6 +83,7 @@ export const ShowNft = ({ nfts }: Props) => {
     if (offChainMetadata === undefined) {
         return <></>
     }
+
     return (
         <Card metadata={offChainMetadata} key={mint} />
     );

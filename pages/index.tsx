@@ -8,17 +8,15 @@ import { DigitalAssetWithToken, JsonMetadata } from "@metaplex-foundation/mpl-to
 import { useEffect, useMemo, useState } from "react";
 import { useUmi } from "../utils/useUmi";
 import { guardChecker } from "../utils/checkAllowed";
-import { Center, Card, CardHeader, CardBody, StackDivider, Heading, Stack, useToast, Text, Skeleton, useDisclosure, Button, Modal, ModalBody, ModalCloseButton, ModalContent, Image, ModalHeader, ModalOverlay, Box, Divider, VStack, Flex, Input } from '@chakra-ui/react';
-import { ButtonList } from "../components/mintButton";
+import { Stack, useToast, Text, Skeleton, useDisclosure, Modal, ModalBody, ModalCloseButton, ModalContent, Image, ModalHeader, ModalOverlay, Box, VStack, Flex } from '@chakra-ui/react';
 import { GuardReturn } from "../utils/checkerHelper";
 import { ShowNft } from "../components/showNft";
-import { InitializeModal } from "../components/initializeModal";
-import { headerText, logo_svg } from "../settings";
+import { logo_svg } from "../settings";
 import { useSolanaTime } from "@/utils/SolanaTimeContext";
 import { useCandyMachine } from "@/hooks";
 import { MainContainer } from "@/components/containers";
 
-import { PrimaryButton } from "@/components/buttons";
+import { PrimaryButton, ShowDummyNftButton } from "@/components/buttons";
 import { CoinflowModal } from "@/components/coinflow";
 import { MintButton } from "@/components/buttons/MintButton.component";
 
@@ -26,7 +24,6 @@ export interface IsMinting {
   label: string;
   minting: boolean;
 }
-
 
 export default function Home() {
   const umi = useUmi();
@@ -140,11 +137,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [umi, checkEligibility]);
 
-  const handleMint = () => {
-
-    console.log('[handleMint]');
-  }
-
   return (
     <>
       <Head>
@@ -169,11 +161,7 @@ export default function Home() {
       >
         <MainContainer justifyContent="space-between" w="600px" h="600px">
           {/* WTF ??? Can't center this image - TODO */}
-          <Box
-            flexDirection="column"
-            alignContent="center"
-            justifyContent="center"
-          >
+          <Flex justifyContent="center">
             <Image
               rounded={"lg"}
               height={230}
@@ -181,61 +169,70 @@ export default function Home() {
               alt={"project Image"}
               src={logo_svg}
             />
-          </Box>
+          </Flex>
 
           {loading ? (
             <></>
           ) : (
-            <Flex>
-              <Box
-                border='1px'
-                borderRadius={"5px"}
-                w='full'
-                p={2}
-              >
-                <VStack>
-                  <Text fontSize={"sm"}>Available NFTs:</Text>
-                  <Text fontWeight={"semibold"}>
-                    {Number(candyMachine?.itemsLoaded) -
-                      Number(candyMachine?.itemsRedeemed)}
-                    /{candyMachine?.itemsLoaded}
-                  </Text>
-                </VStack>
-              </Box>
-            </Flex>
+            <Box w="full" p={2}>
+              <VStack>
+                <Text fontSize={"sm"}>Available NFTs:</Text>
+                <Text fontWeight={"semibold"}>
+                  {Number(candyMachine?.itemsLoaded) -
+                    Number(candyMachine?.itemsRedeemed)}
+                  /{candyMachine?.itemsLoaded}
+                </Text>
+              </VStack>
+            </Box>
           )}
 
           <Stack spacing="8">
-             {loading ? (
-               <div>
-                 <Skeleton height="40px" my="10px" />
-                 <Skeleton height="40px" my="10px" />
-                 <Skeleton height="40px" my="10px" />
-               </div>
-             ) : (
-               <MintButton
-                 guardList={guards}
-                 candyMachine={candyMachine}
-                 candyGuard={candyGuard}
-                 umi={umi}
-                 ownedTokens={ownedTokens}
-                 toast={toast}
-                 setGuardList={setGuards}
-                 mintsCreated={mintsCreated}
-                 setMintsCreated={setMintsCreated}
-                 onOpen={onShowNftOpen}
-                 setCheckEligibility={setCheckEligibility}
-               />
-             )}
-           </Stack>
-
-          {/* <PrimaryButton
-            disabled={isAllowed}
-            onClick={useCoinflow ? onMintPaymentOpen : handleMint}
-          >
-            Mint
-          </PrimaryButton> */}
+            {loading ? (
+              <div>
+                <Skeleton height="40px" my="10px" />
+                <Skeleton height="40px" my="10px" />
+                <Skeleton height="40px" my="10px" />
+              </div>
+            ) : (
+              <MintButton
+                guardList={guards}
+                candyMachine={candyMachine}
+                candyGuard={candyGuard}
+                umi={umi}
+                ownedTokens={ownedTokens}
+                toast={toast}
+                setGuardList={setGuards}
+                mintsCreated={mintsCreated}
+                setMintsCreated={setMintsCreated}
+                onOpen={onShowNftOpen}
+                setCheckEligibility={setCheckEligibility}
+              />
+            )}
+          </Stack>
         </MainContainer>
+
+        {/* Enable this if you want to have a button that pops the modal with a hardcoded nft */}
+        {/* <ShowDummyNftButton
+          umi={umi}
+          mintsCreated={mintsCreated}
+          setMintsCreated={setMintsCreated}
+          onShowNftOpen={onShowNftOpen}
+        >
+          Show NFT
+        </ShowDummyNftButton> */}
+
+        <Modal isOpen={isShowNftOpen} onClose={onShowNftClose}>
+          <ModalOverlay />
+          <ModalContent bg="transparent">
+            <MainContainer w="full">
+              <ModalHeader>Your minted NFT:</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                <ShowNft nfts={mintsCreated} />
+              </ModalBody>
+            </MainContainer>
+          </ModalContent>
+        </Modal>
 
         {useCoinflow && (
           <Modal isOpen={isMintPaymentOpen} onClose={onMintPaymentClose}>
