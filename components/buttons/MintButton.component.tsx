@@ -4,10 +4,11 @@ import { ButtonProps, Tooltip, UseToastOptions } from "@chakra-ui/react";
 import { CandyGuard, CandyMachine, mintV2 } from "@metaplex-foundation/mpl-candy-machine";
 import { DigitalAsset, DigitalAssetWithToken, JsonMetadata, fetchDigitalAsset, fetchJsonMetadata } from "@metaplex-foundation/mpl-token-metadata";
 import { setComputeUnitLimit } from "@metaplex-foundation/mpl-toolbox";
-import { PublicKey, TransactionWithMeta, Umi, createBigInt, generateSigner, none, some, transactionBuilder } from "@metaplex-foundation/umi";
+import { PublicKey, TransactionBuilder, TransactionWithMeta, Umi, createBigInt, generateSigner, none, some, transactionBuilder } from "@metaplex-foundation/umi";
 import { Dispatch, SetStateAction } from "react";
 import { PrimaryButton } from "./PrimaryButton.component";
 import { mintText } from "@/settings";
+import { fetchNft } from "@/utils/utils";
 
 interface MintButtonProps extends ButtonProps {
   umi: Umi;
@@ -31,6 +32,8 @@ interface MintButtonProps extends ButtonProps {
   >;
   onOpen: () => void;
   setCheckEligibility: Dispatch<SetStateAction<boolean>>;
+  setStatus: Dispatch<SetStateAction<string | undefined>>;
+  numNFTs?: number;
 }
 
 const detectBotTax = (logs: string[]) => {
@@ -40,25 +43,7 @@ const detectBotTax = (logs: string[]) => {
     return false;
 }
 
-const fetchNft = async (umi: Umi, nftAdress: PublicKey, toast: (options: Omit<UseToastOptions, "id">) => void) => {
-    let digitalAsset: DigitalAsset | undefined;
-    let jsonMetadata: JsonMetadata | undefined;
-    try {
-        digitalAsset = await fetchDigitalAsset(umi, nftAdress);
-        jsonMetadata = await fetchJsonMetadata(umi, digitalAsset.metadata.uri)
-    } catch (e) {
-        console.error(e);
-        toast({
-            title: 'Nft could not be fetched!',
-            description: "Please check your Wallet instead.",
-            status: 'error',
-            duration: 9000,
-            isClosable: true,
-        });
-    }
 
-    return { digitalAsset, jsonMetadata }
-}
 
 const updateLoadingText = (
   loadingText: string | undefined,
@@ -91,7 +76,8 @@ const mintClick = async (
     guardList: GuardReturn[],
     setGuardList: Dispatch<SetStateAction<GuardReturn[]>>,
     onOpen: () => void,
-    setCheckEligibility: Dispatch<SetStateAction<boolean>>
+    setCheckEligibility: Dispatch<SetStateAction<boolean>>,
+    numNFTs: number
 ) => {
   // const guardToUse = chooseGuardToUse(guard, candyGuard);
   const guardToUse = { label: "default", guards: candyGuard.guards };
@@ -120,20 +106,30 @@ const mintClick = async (
 
     const nftMint = generateSigner(umi);
     const mintArgs = mintArgsBuilder(candyMachine, guardToUse, ownedTokens);
-    const tx = transactionBuilder().add(
-      mintV2(umi, {
-        candyMachine: candyMachine.publicKey,
-        collectionMint: candyMachine.collectionMint,
-        collectionUpdateAuthority: candyMachine.authority,
-        nftMint,
-        group: guardToUse.label === "default" ? none() : some(guardToUse.label),
-        candyGuard: candyGuard.publicKey,
-        mintArgs,
-        tokenStandard: candyMachine.tokenStandard,
-      })
-    );
+    let txs: TransactionBuilder[] = [];
 
-    const groupedTx = await combineTransactions(umi, [routeBuild, tx], toast);
+    console.log("numNFTs", numNFTs);
+    for (let index = 0; index < numNFTs; index++) {
+      const tx = transactionBuilder().add(
+        mintV2(umi, {
+          candyMachine: candyMachine.publicKey,
+          collectionMint: candyMachine.collectionMint,
+          collectionUpdateAuthority: candyMachine.authority,
+          nftMint,
+          group:
+            guardToUse.label === "default" ? none() : some(guardToUse.label),
+          candyGuard: candyGuard.publicKey,
+          mintArgs,
+          tokenStandard: candyMachine.tokenStandard,
+        })
+      );
+
+      if (!tx) continue;
+
+      txs.push(tx);
+    }
+
+    const groupedTx = await combineTransactions(umi, [routeBuild, ...txs], toast);
     if (!groupedTx || groupedTx.length === 0) {
       console.error("no transaction to send");
       return;
@@ -289,6 +285,8 @@ export const MintButton = ({
   setMintsCreated,
   onOpen,
   setCheckEligibility,
+  setStatus,
+  numNFTs = 1,
 }: MintButtonProps) => {
   if (!candyMachine || !candyGuard) {
     return <></>;
@@ -335,36 +333,37 @@ export const MintButton = ({
     tooltip: guard.reason
   };
 
+  setStatus(buttonGuard.tooltip);
+
   return (
-    <Tooltip label={buttonGuard.tooltip} aria-label="Mint button">
-      <PrimaryButton
-        isDisabled={!buttonGuard.allowed}
-        isLoading={
-          guardList.find((elem) => elem.label === buttonGuard.label)?.minting
-        }
-        loadingText={
-          guardList.find((elem) => elem.label === buttonGuard.label)
-            ?.loadingText
-        }
-        onClick={() =>
-          mintClick(
-            umi,
-            buttonGuard,
-            candyMachine,
-            candyGuard,
-            ownedTokens,
-            toast,
-            mintsCreated,
-            setMintsCreated,
-            guardList,
-            setGuardList,
-            onOpen,
-            setCheckEligibility
-          )
-        }
-      >
-        {buttonGuard.buttonLabel}
-      </PrimaryButton>
-    </Tooltip>
+    <PrimaryButton
+      w='65%'
+      isDisabled={!buttonGuard.allowed}
+      isLoading={
+        guardList.find((elem) => elem.label === buttonGuard.label)?.minting
+      }
+      loadingText={
+        guardList.find((elem) => elem.label === buttonGuard.label)?.loadingText
+      }
+      onClick={() =>
+        mintClick(
+          umi,
+          buttonGuard,
+          candyMachine,
+          candyGuard,
+          ownedTokens,
+          toast,
+          mintsCreated,
+          setMintsCreated,
+          guardList,
+          setGuardList,
+          onOpen,
+          setCheckEligibility,
+          numNFTs
+        )
+      }
+    >
+      {buttonGuard.buttonLabel}
+    </PrimaryButton>
   );
 };

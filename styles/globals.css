@@ -40,10 +40,23 @@
   margin: 0;
 }
 
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@600;700&display=swap');
+
+@font-face {
+  font-family: 'TitilliumWeb';
+  src: url('./fonts/TitilliumWeb-Regular.ttf') format('truetype');
+}
+
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  font-family: 'TitilliumWeb', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -73,3 +86,5 @@ button.wallet-adapter-button-trigger {
 button.wallet-adapter-button-trigger:hover {
   background-color: rgb(var(--hover-background-rgb)) !important;
 }
+
+

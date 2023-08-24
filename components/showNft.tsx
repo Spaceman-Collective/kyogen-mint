@@ -13,7 +13,7 @@ interface TraitsProps {
 }
 const Trait = ({ heading, description }: TraitProps) => {
     return (
-        <Box background={"teal.100"} borderRadius={"5px"} width={"120px"} minHeight={"50px"}>
+        <Box background={"#D1C7A7"} borderRadius={"5px"} width={"120px"} minHeight={"50px"}>
             <VStack>
                 <Text fontSize={"sm"}>{heading}</Text>
                 <Text fontSize={"sm"} marginTop={"-2"} fontWeight={"semibold"}>{description}</Text>
@@ -83,6 +83,7 @@ export const ShowNft = ({ nfts }: Props) => {
     if (offChainMetadata === undefined) {
         return <></>
     }
+
     return (
         <Card metadata={offChainMetadata} key={mint} />
     );
