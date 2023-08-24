@@ -8,14 +8,27 @@ interface PrimaryButtonProps extends ButtonProps {
   children: React.ReactNode;
 }
 
+export const PrimaryButton = ({ children, className, disabled, loading, ...props }: PrimaryButtonProps) => {
+  return (
+    <StyledButton
+      isLoading={disabled || loading}
+      isDisabled={disabled || loading}
+      className={className}
+      {...props}
+    >
+      {children}
+    </StyledButton>
+  );
+};
+
 const StyledButton = styled(Button)`
   background-color: ${colors.main.kyogenPrimary};
   height: 57px;
   border: 3px solid black;
   border-radius: 50px;
   box-shadow: 4px 4px 0 #14161B, inset 0 -10px 0 rgba(0, 0, 0, 0.25);
-  font-family: 'millimetre';
-  font-weight: bold;
+  font-family: 'TitilliumWeb', sans-serif;
+  font-weight: 600;
   text-transform: uppercase;
   padding: 5px 20px;
   display: flex;
@@ -39,16 +52,3 @@ const StyledButton = styled(Button)`
     color: white;
   }
 `;
-
-export const PrimaryButton = ({ children, className, disabled, loading, ...props }: PrimaryButtonProps) => {
-  return (
-    <StyledButton
-      isLoading={disabled || loading}
-      isDisabled={disabled || loading}
-      className={className}
-      {...props}
-    >
-      {children}
-    </StyledButton>
-  );
-};

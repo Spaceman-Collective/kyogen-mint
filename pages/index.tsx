@@ -8,7 +8,7 @@ import { DigitalAssetWithToken, JsonMetadata } from "@metaplex-foundation/mpl-to
 import { useEffect, useMemo, useState } from "react";
 import { useUmi } from "../utils/useUmi";
 import { guardChecker } from "../utils/checkAllowed";
-import { Stack, useToast, Text, Skeleton, useDisclosure, Modal, ModalBody, ModalCloseButton, ModalContent, Image, ModalHeader, ModalOverlay, Box, VStack, Flex } from '@chakra-ui/react';
+import { Stack, useToast, Text, Skeleton, useDisclosure, Modal, ModalBody, ModalCloseButton, ModalContent, Image, ModalHeader, ModalOverlay, Box, VStack, Flex, HStack, Button, Input } from '@chakra-ui/react';
 import { GuardReturn } from "../utils/checkerHelper";
 import { ShowNft } from "../components/showNft";
 import { logo_svg } from "../settings";
@@ -19,6 +19,7 @@ import { MainContainer } from "@/components/containers";
 import { PrimaryButton, ShowDummyNftButton } from "@/components/buttons";
 import { CoinflowModal } from "@/components/coinflow";
 import { MintButton } from "@/components/buttons/MintButton.component";
+import styled from "@emotion/styled";
 
 export interface IsMinting {
   label: string;
@@ -49,6 +50,8 @@ export default function Home() {
 
   const [isAllowed, setIsAllowed] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [numNFTs, setNumNFTs] = useState<number>(1);
+  const [statusText, setStatusText] = useState<string | undefined>("");
 
   const [ownedTokens, setOwnedTokens] = useState<DigitalAssetWithToken[]>();
   const [guards, setGuards] = useState<GuardReturn[]>([
@@ -160,7 +163,6 @@ export default function Home() {
         justifyContent="center"
       >
         <MainContainer justifyContent="space-between" w="600px" h="600px">
-          {/* WTF ??? Can't center this image - TODO */}
           <Flex justifyContent="center">
             <Image
               rounded={"lg"}
@@ -174,7 +176,13 @@ export default function Home() {
           {loading ? (
             <></>
           ) : (
-            <Box w="full" p={2}>
+            <Flex
+              w="full"
+              h="full"
+              alignItems={"center"}
+              justifyContent={"center"}
+              flexDir={"column"}
+            >
               <VStack>
                 <Text fontSize={"sm"}>Available NFTs:</Text>
                 <Text fontWeight={"semibold"}>
@@ -183,30 +191,58 @@ export default function Home() {
                   /{candyMachine?.itemsLoaded}
                 </Text>
               </VStack>
-            </Box>
+              <HStack alignItems={"center"} gap="6">
+                <StyledButton
+                  img={"/assets/kyogen_minus.svg"}
+                  size={"xs"}
+                  onClick={(e) => {
+                    if (numNFTs > 1) {
+                      setNumNFTs(numNFTs - 1);
+                    }
+                  }}
+                />
+                <StyledInput
+                  value={numNFTs}
+                  w="95px"
+                  h="50px"
+                  onChange={(e) => setNumNFTs(Number(e.target.value))}
+                ></StyledInput>
+                <StyledButton
+                  img={"/assets/kyogen_plus.svg"}
+                  size={"xs"}
+                  bgImage={"/assets/kyogen_plus.svg"}
+                  onClick={() => setNumNFTs(numNFTs + 1)}
+                />
+              </HStack>
+            </Flex>
           )}
 
           <Stack spacing="8">
             {loading ? (
               <div>
-                <Skeleton height="40px" my="10px" />
-                <Skeleton height="40px" my="10px" />
-                <Skeleton height="40px" my="10px" />
+                <Skeleton height="300px" my="10px" />
               </div>
             ) : (
-              <MintButton
-                guardList={guards}
-                candyMachine={candyMachine}
-                candyGuard={candyGuard}
-                umi={umi}
-                ownedTokens={ownedTokens}
-                toast={toast}
-                setGuardList={setGuards}
-                mintsCreated={mintsCreated}
-                setMintsCreated={setMintsCreated}
-                onOpen={onShowNftOpen}
-                setCheckEligibility={setCheckEligibility}
-              />
+              <Flex w={'full'} flexDir={'column'} justifyContent={'center'} alignItems='center' gap='4'>
+                <Text textAlign={'center'} fontFamily={"TitilliumWeb"} fontWeight={"bold"}>
+                  {statusText}
+                </Text>
+                <MintButton
+                  setStatus={setStatusText}
+                  guardList={guards}
+                  candyMachine={candyMachine}
+                  candyGuard={candyGuard}
+                  umi={umi}
+                  ownedTokens={ownedTokens}
+                  toast={toast}
+                  setGuardList={setGuards}
+                  mintsCreated={mintsCreated}
+                  setMintsCreated={setMintsCreated}
+                  onOpen={onShowNftOpen}
+                  setCheckEligibility={setCheckEligibility}
+                  numNFTs={numNFTs}
+                />
+              </Flex>
             )}
           </Stack>
         </MainContainer>
@@ -270,3 +306,32 @@ export default function Home() {
     </>
   );
 }
+
+const StyledButton = styled(Button)<{ img?: string }>`
+  background-color: transparent;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: ${(props) => `url(${props.img ? props.img : ''})`};
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    background-image: ${(props) => `url(${props.img ? props.img : ''})`};
+    background-position: center;
+    background-color: transparent;
+
+    transform: scale(1.1);
+  }
+`
+
+const StyledInput = styled(Input)`
+  background-color: white;
+  border-radius: 10px;
+  border: 3px solid black;
+  font-family: 'TitilliumWeb', sans-serif;
+  font-weight: 600;
+
+  :hover {
+    border: 3px solid black;
+  }
+`
