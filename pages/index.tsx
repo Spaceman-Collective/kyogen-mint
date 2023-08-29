@@ -8,7 +8,7 @@ import { DigitalAssetWithToken, JsonMetadata } from "@metaplex-foundation/mpl-to
 import { useEffect, useMemo, useState } from "react";
 import { useUmi } from "../utils/useUmi";
 import { guardChecker } from "../utils/checkAllowed";
-import { Stack, useToast, Text, Skeleton, useDisclosure, Modal, ModalBody, ModalCloseButton, ModalContent, Image, ModalHeader, ModalOverlay, Box, VStack, Flex, HStack, Button, Input } from '@chakra-ui/react';
+import { Stack, useToast, Text, Skeleton, useDisclosure, Modal, ModalBody, ModalCloseButton, ModalContent, Image, ModalHeader, ModalOverlay, Box, VStack, Flex, HStack, Button, Input, Grid } from '@chakra-ui/react';
 import { GuardReturn } from "../utils/checkerHelper";
 import { ShowNft } from "../components/showNft";
 import { logo_svg } from "../settings";
@@ -44,9 +44,8 @@ export default function Home() {
   } = useDisclosure();
 
   const [mintsCreated, setMintsCreated] = useState<
-    | { mint: PublicKey; offChainMetadata: JsonMetadata | undefined }[]
-    | undefined
-  >();
+    { mint: PublicKey; offChainMetadata: JsonMetadata | undefined }[]
+  >([]);
 
   const [isAllowed, setIsAllowed] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -184,11 +183,10 @@ export default function Home() {
               flexDir={"column"}
             >
               <VStack>
-                <Text fontSize={"sm"}>Available NFTs:</Text>
+                {/* <Text fontSize={"sm"}>Available NFTs:</Text> */}
                 <Text fontWeight={"semibold"}>
-                  {Number(candyMachine?.itemsLoaded) -
-                    Number(candyMachine?.itemsRedeemed)}
-                  /{candyMachine?.itemsLoaded}
+                  {(Number(candyMachine?.itemsLoaded) -
+                    Number(candyMachine?.itemsRedeemed) == 0) ?? "Sold out!"}
                 </Text>
               </VStack>
               <HStack alignItems={"center"} gap="6">
@@ -257,14 +255,19 @@ export default function Home() {
           Show NFT
         </ShowDummyNftButton> */}
 
-        <Modal isOpen={isShowNftOpen} onClose={onShowNftClose}>
+        <Modal size='xl' isOpen={isShowNftOpen} onClose={onShowNftClose}>
           <ModalOverlay />
           <ModalContent bg="transparent">
-            <MainContainer w="full">
-              <ModalHeader>Your minted NFT:</ModalHeader>
+            <MainContainer>
+              <ModalHeader>Your minted NFT(s):</ModalHeader>
               <ModalCloseButton />
               <ModalBody>
-                <ShowNft nfts={mintsCreated} />
+                <VStack overflowY="auto" gap={6} w='full'>
+                  {mintsCreated?.map((mint, index) => (
+                    <ShowNft key={`${mint}-${index}`} nft={mint} size="lg" />
+                  ))}
+                  {/* <ShowNft key={`${'222'}-${'222'}`} nft={mintsCreated?.at(0)} size="lg" /> */}
+                </VStack>
               </ModalBody>
             </MainContainer>
           </ModalContent>

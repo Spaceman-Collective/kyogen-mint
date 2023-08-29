@@ -2,6 +2,7 @@ import { JsonMetadata } from "@metaplex-foundation/mpl-token-metadata";
 import { PublicKey } from "@metaplex-foundation/umi";
 import { Box, Text, Divider, SimpleGrid, VStack } from "@chakra-ui/react";
 import React from 'react';
+import styled from "@emotion/styled";
 
 interface TraitProps {
     heading: string;
@@ -27,8 +28,6 @@ const Traits = ({ metadata }: TraitsProps) => {
     if (metadata === undefined || metadata.attributes === undefined) {
         return <></>
     }
-    console.log("traits")
-
 
     //find all attributes with trait_type and value
     const traits = metadata.attributes.filter((a) => a.trait_type !== undefined && a.value !== undefined);
@@ -40,51 +39,65 @@ const Traits = ({ metadata }: TraitsProps) => {
 };
 
 
-
-export default function Card({ metadata }: { metadata: JsonMetadata }) {
-
-    // Get the images from the metadata if animation_url is present use this
-    const image = metadata.animation_url ?? metadata.image;
-    console.log("image: " + image)
-    return (
-        <Box
-            position={'relative'}
-
-            width={'full'}
-            overflow={'hidden'}>
-
-            <Box
-                key={image}
-                height={'sm'}
-                position="relative"
-                backgroundPosition="center"
-                backgroundRepeat="no-repeat"
-                backgroundSize="cover"
-                backgroundImage={`url(${image})`}
-            />
-            <Text fontWeight={"semibold"} marginTop={"15px"}>{metadata.name}</Text>
-            <Text>{metadata.description}</Text>
-            <Traits metadata={metadata} />
-        </Box>
-    );
+interface CardProps {
+    metadata: JsonMetadata;
+    size?: string;
 }
 
+export default function Card({ metadata, size = 'md' }: CardProps) {
+  // Get the images from the metadata if animation_url is present use this
+ const sizeMap = new Map<string, string>([
+    ['sm', '150px'],
+    ['md', '300px'],
+    ['lg', '400px'],
+    ['xl', '600px']
+  ]);
+
+  const image = metadata.animation_url ?? metadata.image;
+  return (
+    <StyledBox width={sizeMap.get(size) ?? 'full'}>
+      <Box
+        key={image}
+        height={"sm"}
+        position="relative"
+        backgroundPosition="center"
+        backgroundRepeat="no-repeat"
+        backgroundSize="cover"
+        backgroundImage={`url(${image})`}
+        borderRadius={"15px"}
+      />
+      <Text fontWeight={"semibold"} marginTop={"15px"}>
+        {metadata.name}
+      </Text>
+      <Text>{metadata.description}</Text>
+      <Traits metadata={metadata} />
+    </StyledBox>
+  );
+}
+
+const StyledBox = styled(Box)`
+  padding: 1rem;
+  border: 1px solid black;
+  border-radius: 15px;
+`
+
 type Props = {
-    nfts: { mint: PublicKey, offChainMetadata: JsonMetadata | undefined }[] | undefined;
+    size?: string;
+    nft: { mint: PublicKey, offChainMetadata: JsonMetadata | undefined } | undefined;
 };
 
-export const ShowNft = ({ nfts }: Props) => {
-    if (nfts === undefined) {
+export const ShowNft = ({ nft, size }: Props) => {
+    if (nft === undefined) {
         return <></>
     }
 
     // get the last added nft
-    const { mint, offChainMetadata } = nfts[nfts.length - 1];
+    const { mint, offChainMetadata } = nft;
     if (offChainMetadata === undefined) {
         return <></>
     }
 
     return (
-        <Card metadata={offChainMetadata} key={mint} />
+        <Card metadata={offChainMetadata} key={mint} size={size} />
     );
 }

@@ -48,13 +48,15 @@ export const ShowDummyNftButton = ({
           },
         ]);
       } else {
-        setMintsCreated([
-          ...mintsCreated,
-          {
-            mint: nftMint,
-            offChainMetadata: fetchedNft.jsonMetadata,
-          },
-        ]);
+        if (mintsCreated.length < 3) {
+          setMintsCreated([
+            ...mintsCreated,
+            {
+              mint: nftMint,
+              offChainMetadata: fetchedNft.jsonMetadata,
+            },
+          ]);
+        }
       }
 
       setLoading(false);
