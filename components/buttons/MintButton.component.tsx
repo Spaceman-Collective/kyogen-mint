@@ -1,14 +1,15 @@
 import { GuardReturn } from "@/utils/checkerHelper";
-import { GuardButtonList, chooseGuardToUse, combineTransactions, mintArgsBuilder, routeBuilder } from "@/utils/mintHelper";
+import { GuardButtonList, mintArgsBuilder, routeBuilder } from "@/utils/mintHelper";
 import { ButtonProps, Tooltip, UseToastOptions } from "@chakra-ui/react";
 import { CandyGuard, CandyMachine, mintV2 } from "@metaplex-foundation/mpl-candy-machine";
-import { DigitalAsset, DigitalAssetWithToken, JsonMetadata, fetchDigitalAsset, fetchJsonMetadata } from "@metaplex-foundation/mpl-token-metadata";
+import { DigitalAssetWithToken, JsonMetadata } from "@metaplex-foundation/mpl-token-metadata";
 import { setComputeUnitLimit } from "@metaplex-foundation/mpl-toolbox";
-import { PublicKey, TransactionBuilder, TransactionWithMeta, Umi, createBigInt, generateSigner, none, some, transactionBuilder } from "@metaplex-foundation/umi";
+import { KeypairSigner, PublicKey, Transaction, TransactionBuilder, TransactionWithMeta, Umi, createBigInt, generateSigner, none, some, transactionBuilder } from "@metaplex-foundation/umi";
 import { Dispatch, SetStateAction } from "react";
 import { PrimaryButton } from "./PrimaryButton.component";
 import { mintText } from "@/settings";
 import { fetchNft } from "@/utils/utils";
+import { toWeb3JsTransaction } from "@metaplex-foundation/umi-web3js-adapters";
 
 interface MintButtonProps extends ButtonProps {
   umi: Umi;
@@ -22,12 +23,10 @@ interface MintButtonProps extends ButtonProps {
     | {
         mint: PublicKey;
         offChainMetadata: JsonMetadata | undefined;
-      }[]
-    | undefined;
+      }[];
   setMintsCreated: Dispatch<
     SetStateAction<
-      | { mint: PublicKey; offChainMetadata: JsonMetadata | undefined }[]
-      | undefined
+      { mint: PublicKey; offChainMetadata: JsonMetadata | undefined }[]
     >
   >;
   onOpen: () => void;
@@ -71,8 +70,8 @@ const mintClick = async (
     mintsCreated: {
         mint: PublicKey;
         offChainMetadata: JsonMetadata | undefined;
-    }[] | undefined,
-    setMintsCreated: Dispatch<SetStateAction<{ mint: PublicKey; offChainMetadata: JsonMetadata | undefined; }[] | undefined>>,
+    }[],
+    setMintsCreated: Dispatch<SetStateAction<{ mint: PublicKey; offChainMetadata: JsonMetadata | undefined; }[]>>,
     guardList: GuardReturn[],
     setGuardList: Dispatch<SetStateAction<GuardReturn[]>>,
     onOpen: () => void,
@@ -104,86 +103,51 @@ const mintClick = async (
       routeBuild = transactionBuilder();
     }
 
-    const nftMint = generateSigner(umi);
+    const nftMintArr: KeypairSigner[] = [];
     const mintArgs = mintArgsBuilder(candyMachine, guardToUse, ownedTokens);
-    let txs: TransactionBuilder[] = [];
 
-    console.log("numNFTs", numNFTs);
-    for (let index = 0; index < numNFTs; index++) {
-      const tx = transactionBuilder().add(
-        mintV2(umi, {
-          candyMachine: candyMachine.publicKey,
-          collectionMint: candyMachine.collectionMint,
-          collectionUpdateAuthority: candyMachine.authority,
-          nftMint,
-          group:
-            guardToUse.label === "default" ? none() : some(guardToUse.label),
-          candyGuard: candyGuard.publicKey,
-          mintArgs,
-          tokenStandard: candyMachine.tokenStandard,
-        })
-      );
-
-      if (!tx) continue;
-
-      txs.push(tx);
-    }
-
-    const groupedTx = await combineTransactions(umi, [routeBuild, ...txs], toast);
-    if (!groupedTx || groupedTx.length === 0) {
-      console.error("no transaction to send");
-      return;
-    }
-
+    let txArray: Transaction[] = [];
     let lastSignature: Uint8Array | undefined;
-    if (groupedTx.length > 1) {
-      let counter = 0;
-      for (let tx of groupedTx) {
-        tx = tx.prepend(setComputeUnitLimit(umi, { units: 800_000 }));
-        const { signature } = await tx.sendAndConfirm(umi, {
-          confirm: { commitment: "processed" },
-          send: {
-            skipPreflight: true,
-          },
-        });
-        lastSignature = signature;
-        if (counter < groupedTx.length - 1) {
-          updateLoadingText(
-            `Transaction ${counter}/${groupedTx.length}`,
-            guardList,
-            guardToUse.label,
-            setGuardList
-          );
+    for (let index = 0; index < numNFTs; index++) {
+      const nftMint = generateSigner(umi);
+      nftMintArr.push(nftMint);
 
-          toast({
-            title: `Transaction ${counter}/${groupedTx.length} successful!`,
-            description: `Please sign the next...`,
-            status: "success",
-            duration: 90000,
-            isClosable: true,
-          });
-        }
-      }
-    } else {
+      const tx = transactionBuilder()
+        .add(
+          mintV2(umi, {
+            candyMachine: candyMachine.publicKey,
+            collectionMint: candyMachine.collectionMint,
+            collectionUpdateAuthority: candyMachine.authority,
+            nftMint,
+            group:
+              guardToUse.label === "default" ? none() : some(guardToUse.label),
+            candyGuard: candyGuard.publicKey,
+            mintArgs,
+            tokenStandard: candyMachine.tokenStandard,
+          })
+        )
+        .add(routeBuild)
+        .prepend(setComputeUnitLimit(umi, { units: 800_000 }));
 
-      updateLoadingText(
-        `Please sign`,
-        guardList,
-        guardToUse.label,
-        setGuardList
-      );
+      if (!tx) return;
 
-      let tx = groupedTx[0].prepend(
-        setComputeUnitLimit(umi, { units: 800_000 })
-      );
-      const { signature } = await tx.sendAndConfirm(umi, {
-        confirm: { commitment: "processed" },
-        send: {
-          skipPreflight: true,
-        },
-      });
-      lastSignature = signature;
+      /* Besides user, the mint tx has to be signed by `nftMint` also */
+      const builtTransaction = await tx.buildWithLatestBlockhash(umi);
+      const signedTransaction = await nftMint.signTransaction(builtTransaction);
+
+      txArray.push(signedTransaction);
     }
+
+    const signedTxs = await umi.identity.signAllTransactions(txArray);
+
+    for (let signedTx of signedTxs) {
+      let web3tx = toWeb3JsTransaction(signedTx);
+
+      // console.log('[sending] signedTx', Buffer.from(web3tx.serialize()).toString('base64'));
+      lastSignature = await umi.rpc.sendTransaction(signedTx);
+      // console.log('[signature]', Buffer.from(lastSignature).toString('base64'));
+    }
+
     if (!lastSignature) {
       // throw error that no tx was created
       throw new Error("no tx was created");
@@ -227,29 +191,25 @@ const mintClick = async (
       setGuardList
     );
 
-    const fetchedNft = await fetchNft(umi, nftMint.publicKey, toast);
-    if (fetchedNft.digitalAsset && fetchedNft.jsonMetadata) {
-      if (mintsCreated === undefined) {
-        setMintsCreated([
-          {
-            mint: nftMint.publicKey,
-            offChainMetadata: fetchedNft.jsonMetadata,
-          },
-        ]);
-      } else {
-        setMintsCreated([
-          ...mintsCreated,
-          {
-            mint: nftMint.publicKey,
-            offChainMetadata: fetchedNft.jsonMetadata,
-          },
-        ]);
+    let mints = [];
+    for (let nftMint of nftMintArr) {
+      const fetchedNft = await fetchNft(umi, nftMint.publicKey, toast);
+      if (fetchedNft.digitalAsset && fetchedNft.jsonMetadata) {
+        mints.push({
+          mint: nftMint.publicKey,
+          offChainMetadata: fetchedNft.jsonMetadata,
+        });
       }
-
-      onOpen();
     }
+
+    setMintsCreated(mints);
+    onOpen();
   } catch (e) {
-    console.error(`minting failed because of ${e}`);
+    if (e instanceof Error) {
+      console.error(`minting failed because of ${e.message}`);
+    } else {
+      console.error(`minting failed because of`, e);
+    }
 
     toast({
       title: "Your mint failed!",
